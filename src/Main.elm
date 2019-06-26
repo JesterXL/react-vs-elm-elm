@@ -6,12 +6,15 @@ import Url exposing (Url)
 import Html exposing (Html, text, div, h1, img, ul, li, a, b)
 import Html.Attributes exposing (src, href)
 import Debug exposing (log)
+import Routes exposing (fromUrl)
+import Url.Parser exposing (string)
 
 ---- MODEL ----
 
 type alias Model =
     { key : Nav.Key
     , url : Url.Url
+    , currentPage : Page
     }
 
 
@@ -21,7 +24,7 @@ init flags url key =
     let
         msg = log "init url" url
     in
-    (Model key url, Cmd.none )
+    (Model key url Home, Cmd.none )
 
 
 
@@ -49,6 +52,7 @@ update msg model =
         Browser.Internal url ->
             let
                 mgs1 = log "url internal" url
+                msg2 = log "parsed" (fromUrl url)
             in
             ( model, Nav.pushUrl model.key (Url.toString url) )
 
