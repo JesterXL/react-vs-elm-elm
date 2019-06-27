@@ -3,11 +3,12 @@ module Main exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import Url exposing (Url)
-import Html exposing (Html, text, div, h1, img, ul, li, a, b, p)
-import Html.Attributes exposing (src, href)
+import Html exposing (Html, text, div, h1, img, ul, li, a, b, p, table, th, td, tr)
+import Html.Attributes exposing (src, href, style)
 import Debug exposing (log)
 import Routes exposing (fromUrl, Route(..))
 import Url.Parser exposing (string)
+import Array exposing (..)
 
 ---- MODEL ----
 
@@ -15,7 +16,31 @@ type alias Model =
     { key : Nav.Key
     , url : Url.Url
     , currentPage : Route
+    , accounts : Array Account
+    , accountState : AccountsState
     }
+
+type AccountsState =
+  AccountsNotLoaded
+  | AccountsLoading
+  | AccountsLoadNothing
+  | AccountsLoadFailed
+  | AccountsLoadSuccess
+
+type AccountType = 
+  DemandDeposit
+  | AccountAnalysis
+
+accountTypeToString : AccountType -> String
+accountTypeToString accountType =
+  case accountType of
+    DemandDeposit -> "Demand Deposit"
+    AccountAnalysis -> "Account Analysis"
+
+type alias Account =
+  { id : String
+  , nickname : String
+  , accountType: AccountType }
 
 
 -- init : ( Model, Cmd Msg )
@@ -24,7 +49,7 @@ init flags url key =
     let
         msg = log "init url" url
     in
-    (Model key url Home, Cmd.none )
+    (Model key url Home (Array.fromList []) AccountsNotLoaded, Cmd.none)
 
 
 
@@ -110,6 +135,35 @@ viewAccounts model =
   div [] [
     b [] [text "Accounts"]
     , p [] [text "Bunch of accounts."]
+    , accountsTable model
+  ]
+
+accountsTable model =
+  table [
+    style "width" "100%"
+   ][
+    tr [] [
+      th [] [text "ID"]
+      , th [] [text "Account Nickname"]
+      , th [] [text "Account Type"]
+    ]
+  ]
+
+accountsLoading =
+  div [] [text "Loading accounts..."]
+
+accountsFailedToLoad =
+  div [] [text "Accounts failed to load."]
+
+accountsNoneToShow =
+  div [] [text "No accounts to show."]
+
+accountTableRow : Account -> Html Msg
+accountTableRow account =
+  tr [] [
+    td [] [text account.id ] 
+    , td [] [ text account.nickname ]
+    , td [] [ text (accountTypeToString account.accountType) ]
   ]
 
 viewStatements model =
