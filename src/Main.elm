@@ -3,10 +3,10 @@ module Main exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import Url exposing (Url)
-import Html exposing (Html, text, div, h1, img, ul, li, a, b)
+import Html exposing (Html, text, div, h1, img, ul, li, a, b, p)
 import Html.Attributes exposing (src, href)
 import Debug exposing (log)
-import Routes exposing (fromUrl)
+import Routes exposing (fromUrl, Route(..))
 import Url.Parser exposing (string)
 
 ---- MODEL ----
@@ -14,7 +14,7 @@ import Url.Parser exposing (string)
 type alias Model =
     { key : Nav.Key
     , url : Url.Url
-    , currentPage : Page
+    , currentPage : Route
     }
 
 
@@ -39,11 +39,6 @@ type Msg =
     | UrlChanged Url.Url
 
 
-type Page =
-  Home
-  | Statements
-  | Downloads
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
@@ -66,7 +61,7 @@ update msg model =
         let
             msg3 = log "url changed" url.path
         in
-        ( { model | url = url }
+        ( { model | currentPage = fromUrl url, url = url }
         , Cmd.none
         )
 
@@ -87,14 +82,47 @@ view model =
       [ text "The current URL is: "
       , b [] [ text (Url.toString model.url) ]
       , ul []
-          [ viewLink "/home"
-          , viewLink "/profile"
-          , viewLink "/reviews/the-century-of-the-self"
-          , viewLink "/reviews/public-opinion"
-          , viewLink "/reviews/shah-of-shahs"
+          [ viewLink "/"
+          , viewLink "/statements"
+          , viewLink "/downloads"
+          , viewLink "/statements/"
+          , viewLink "/downloads/"
           ]
+      , viewFromRoute model
       ]
   }
+
+viewFromRoute model =
+  case model.currentPage of
+    Routes.Home ->
+      viewAccounts model
+    Routes.Statements ->
+      viewStatements model
+    Routes.Downloads ->
+      viewDownloads model
+    Routes.NotFound ->
+      viewNotFound model
+      
+viewNotFound model =
+  div [] [text "Not found."]
+
+viewAccounts model =
+  div [] [
+    b [] [text "Accounts"]
+    , p [] [text "Bunch of accounts."]
+  ]
+
+viewStatements model =
+  div [] [
+    b [] [text "Statements"]
+    , p [] [text "This is the statements page."]
+  ]
+
+viewDownloads model =
+  div [] [
+    b [] [text "Downloads"]
+    , p [] [text "Downloads shown here."]
+  ]
 
 
 viewLink : String -> Html msg
