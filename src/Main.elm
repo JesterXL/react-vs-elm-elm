@@ -20,7 +20,6 @@ type alias Model =
     { key : Nav.Key
     , url : Url.Url
     , currentPage : Route
-    , accounts : List Account
     , accountState : AccountsState
     }
 
@@ -52,7 +51,7 @@ init flags url key =
     let
         msg = log "init url" url
     in
-    (Model key url Home [] AccountsNotLoaded, Cmd.none)
+    (Model key url Home AccountsNotLoaded, Cmd.none)
 
 
 loadAccounts =
@@ -142,7 +141,7 @@ update msg model =
               msg1 = log "accountJSONs is" accountJSONs
           in
           
-          ( { model | accountState = AccountsLoadSuccess (accountJSONToAccounts accountJSONs), accounts = accountJSONToAccounts accountJSONs }
+          ( { model | accountState = AccountsLoadSuccess (accountJSONToAccounts accountJSONs) }
           , Cmd.none
           )
         Err datError ->
@@ -204,7 +203,17 @@ viewAccounts model =
     b [] [text "Accounts"]
     , p [] [text "Bunch of accounts."]
     , button [ onClick FetchAccounts ] [ text "Fetch Accounts"]
-    , accountsTable model
+    , case model.accountState of
+        AccountsNotLoaded ->
+          div [] [ text "Accounts not fetched yet."]
+        AccountsLoading ->
+          div [] [ text "Loading accounts..."]
+        AccountsLoadNothing ->
+          div [] [ text "No accounts." ]
+        AccountsLoadFailed ->
+          div [] [ text "Failed to load accounts." ]
+        AccountsLoadSuccess accounts ->
+          accountsTable accounts
   ]
 
 accountToRow account =
@@ -215,7 +224,7 @@ accountToRow account =
       , td [] [text (accountTypeToString account.accountType)]
   ]
 
-accountsTable model =
+accountsTable accounts =
   table [
     style "width" "100%"
    ] 
@@ -227,7 +236,7 @@ accountsTable model =
           , th [] [text "Account Nickname"]
           , th [] [text "Account Type"]
         ]
-      ] ++ (List.map accountToRow model.accounts)
+      ] ++ (List.map accountToRow accounts)
     )
 
    
