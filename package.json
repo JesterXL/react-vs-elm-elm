@@ -1,0 +1,19 @@
+{
+  "name": "estatements-elm",
+  "version": "1.0.0",
+  "main": "server.js",
+  "author": "Jesse Warden <jesterxl@jessewarden.com>",
+  "license": "MIT",
+  "scripts": {
+    "server": "nodemon server.js",
+    "start": "elm-app start",
+    "clean": "rm -rf elm-stuff"
+  },
+  "devDependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "lodash": "^4.17.11",
+    "nodemon": "^1.19.1",
+    "uuid": "^3.3.2"
+  }
+}

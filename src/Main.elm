@@ -3,12 +3,15 @@ module Main exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import Url exposing (Url)
-import Html exposing (Html, text, div, h1, img, ul, li, a, b, p, table, th, td, tr)
+import Html exposing (Html, text, div, h1, img, ul, li, a, b, p, table, th, td, tr, button)
 import Html.Attributes exposing (src, href, style)
+import Html.Events exposing (onClick)
 import Debug exposing (log)
 import Routes exposing (fromUrl, Route(..))
 import Url.Parser exposing (string)
 import Array exposing (..)
+import Http
+import Json.Decode exposing (Decoder, map3, field, string, int, array)
 
 ---- MODEL ----
 
@@ -25,7 +28,7 @@ type AccountsState =
   | AccountsLoading
   | AccountsLoadNothing
   | AccountsLoadFailed
-  | AccountsLoadSuccess
+  | AccountsLoadSuccess (Array Account)
 
 type AccountType = 
   DemandDeposit
@@ -42,6 +45,10 @@ type alias Account =
   , nickname : String
   , accountType: AccountType }
 
+type alias AccountJSON =
+  { id : String
+  , nickname : String
+  , accountType : String }
 
 -- init : ( Model, Cmd Msg )
 init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -52,16 +59,56 @@ init flags url key =
     (Model key url Home (Array.fromList []) AccountsNotLoaded, Cmd.none)
 
 
+-- loadAccounts =
+--   Http.get
+--     { url = "http://localhost:8001/accounts/dda"
+--     , expect = Http.expectJson FetchAccountsResult accountsDecoder
+--     }
+
+-- accountsDecoder : Decoder (Array AccountJSON)
+-- accountsDecoder =
+--   array accountDecoder
+
+
+-- accountDecoder : Decoder AccountJSON
+-- accountDecoder =
+--   map3 AccountJSON
+--     (field "id" string)
+--     (field "nickname" string)
+--     (field "type" string)
+
+
+
+
+-- accountTypeDecodeMaybe : Maybe String -> Maybe AccountType
+-- accountTypeDecodeMaybe accountTypeStringMaybe =
+--   case accountTypeStringMaybe of
+--     Just theType ->
+--       if String.toLower theType == "dda" then
+--         Just DemandDeposit
+--       else if String.toLower theType == "aa" then
+--         Just AccountAnalysis
+--       else
+--         Nothing
+--     Nothing ->
+--       Nothing
+
+-- accountTypeDecoder : Decoder String
+-- accountTypeDecoder =
+--   field "type" string
+--   |> Json.Decode.andThen
+
+
+
 
 ---- UPDATE ----
 
 
--- type Msg
-    -- = NoOp
-
 type Msg =
     LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
+    | FetchAccounts
+    -- | FetchAccountsResult (Result Http.Error (Array AccountJSON))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -89,6 +136,31 @@ update msg model =
         ( { model | currentPage = fromUrl url, url = url }
         , Cmd.none
         )
+
+    FetchAccounts ->
+      -- ( model, loadAccounts)
+      (model, Cmd.none)
+
+    -- FetchAccountsResult result ->
+    --   ( model, Cmd.none)
+      -- case result of
+      --   Ok fullText ->
+      --     let
+      --         msg1 = log "fulltext is" fullText
+      --     in
+          
+      --     ( { model | accountState = AccountsLoadSuccess (Array.fromList []) }
+      --     , Cmd.none
+      --     )
+      --   Err datError ->
+      --     let
+      --         msg2 = log "err is" datError
+      --     in
+          
+      --     ( { model | accountState = AccountsLoadFailed }
+      --       , Cmd.none
+      --     )
+
 
 -- SUBSCRIPTIONS
 
@@ -135,6 +207,7 @@ viewAccounts model =
   div [] [
     b [] [text "Accounts"]
     , p [] [text "Bunch of accounts."]
+    , button [ onClick FetchAccounts ] [ text "Fetch Accounts"]
     , accountsTable model
   ]
 
