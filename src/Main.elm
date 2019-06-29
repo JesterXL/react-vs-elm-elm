@@ -11,7 +11,8 @@ import Routes exposing (fromUrl, Route(..))
 import Url.Parser exposing (string)
 import Array exposing (..)
 import Http
-import Json.Decode exposing (Decoder, map3, field, string, int, array)
+import Json.Decode exposing (Decoder, map3, field, string, int, list)
+import Dict
 
 ---- MODEL ----
 
@@ -45,11 +46,6 @@ type alias Account =
   , nickname : String
   , accountType: AccountType }
 
-type alias AccountJSON =
-  { id : String
-  , nickname : String
-  , accountType : String }
-
 -- init : ( Model, Cmd Msg )
 init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
@@ -59,25 +55,28 @@ init flags url key =
     (Model key url Home (Array.fromList []) AccountsNotLoaded, Cmd.none)
 
 
--- loadAccounts =
---   Http.get
---     { url = "http://localhost:8001/accounts/dda"
---     , expect = Http.expectJson FetchAccountsResult accountsDecoder
---     }
+loadAccounts =
+  Http.get
+    { url = "http://localhost:8001/accounts/dda"
+    , expect = Http.expectJson FetchAccountsResult accountsDecoder
+    }
 
--- accountsDecoder : Decoder (Array AccountJSON)
--- accountsDecoder =
---   array accountDecoder
-
-
--- accountDecoder : Decoder AccountJSON
--- accountDecoder =
---   map3 AccountJSON
---     (field "id" string)
---     (field "nickname" string)
---     (field "type" string)
+accountsDecoder : Decoder (List AccountJSON)
+accountsDecoder =
+  list accountDecoder
 
 
+type alias AccountJSON = 
+ { id : Int
+ , nickname : String 
+ , typeString : String }
+
+accountDecoder : Decoder AccountJSON
+accountDecoder =
+  map3 AccountJSON
+    (field "id" int)
+    (field "nickname" string)
+    (field "type" string)
 
 
 -- accountTypeDecodeMaybe : Maybe String -> Maybe AccountType
@@ -108,7 +107,7 @@ type Msg =
     LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
     | FetchAccounts
-    -- | FetchAccountsResult (Result Http.Error (Array AccountJSON))
+    | FetchAccountsResult (Result Http.Error (List AccountJSON))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -138,28 +137,26 @@ update msg model =
         )
 
     FetchAccounts ->
-      -- ( model, loadAccounts)
-      (model, Cmd.none)
+      ( model, loadAccounts)
 
-    -- FetchAccountsResult result ->
-    --   ( model, Cmd.none)
-      -- case result of
-      --   Ok fullText ->
-      --     let
-      --         msg1 = log "fulltext is" fullText
-      --     in
+    FetchAccountsResult result ->
+      case result of
+        Ok accountJSONs ->
+          let
+              msg1 = log "accountJSONs is" accountJSONs
+          in
           
-      --     ( { model | accountState = AccountsLoadSuccess (Array.fromList []) }
-      --     , Cmd.none
-      --     )
-      --   Err datError ->
-      --     let
-      --         msg2 = log "err is" datError
-      --     in
+          ( { model | accountState = AccountsLoadSuccess (Array.fromList []) }
+          , Cmd.none
+          )
+        Err datError ->
+          let
+              msg2 = log "err is" datError
+          in
           
-      --     ( { model | accountState = AccountsLoadFailed }
-      --       , Cmd.none
-      --     )
+          ( { model | accountState = AccountsLoadFailed }
+            , Cmd.none
+          )
 
 
 -- SUBSCRIPTIONS
