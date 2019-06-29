@@ -3,8 +3,8 @@ module Main exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import Url exposing (Url)
-import Html exposing (Html, text, div, h1, img, ul, li, a, b, p, table, th, td, tr, button)
-import Html.Attributes exposing (src, href, style)
+import Html exposing (Html, text, div, h1, img, ul, li, a, b, p, table, th, td, tr, button, select, input)
+import Html.Attributes exposing (src, href, style, type_)
 import Html.Events exposing (onClick)
 import Debug exposing (log)
 import Routes exposing (fromUrl, Route(..))
@@ -209,7 +209,8 @@ viewAccounts model =
 
 accountToRow account =
   tr [] [
-    td [] [text (String.fromInt account.id)]
+    td [] [input [type_ "checkbox"][]]
+    , td [] [text (String.fromInt account.id)]
       , td [] [text account.nickname]
       , td [] [text (accountTypeToString account.accountType)]
   ]
@@ -221,7 +222,8 @@ accountsTable model =
     (
         [
         tr [] [
-          th [] [text "ID"]
+          th [] [input [ type_ "checkbox"] [] ]
+          , th [] [text "ID"]
           , th [] [text "Account Nickname"]
           , th [] [text "Account Type"]
         ]
@@ -239,14 +241,6 @@ accountsFailedToLoad =
 
 accountsNoneToShow =
   div [] [text "No accounts to show."]
-
-accountTableRow : Account -> Html Msg
-accountTableRow account =
-  tr [] [
-    td [] [text (String.fromInt account.id) ] 
-    , td [] [ text account.nickname ]
-    , td [] [ text (accountTypeToString account.accountType) ]
-  ]
 
 viewStatements model =
   div [] [
