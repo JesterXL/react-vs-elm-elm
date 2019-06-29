@@ -105,6 +105,15 @@ type Msg =
     | FetchAccountsResult (Result Http.Error (List AccountJSON))
 
 
+-- chunk : Int -> List -> List (List)
+-- chunk pageSize list =
+--   if pageSize < 1 then
+--     [list]
+--   else
+--     if List.isEmpty list then
+
+  
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
@@ -181,6 +190,7 @@ view model =
       ]
   }
 
+viewFromRoute : Model -> Html Msg
 viewFromRoute model =
   -- let
   --     msg1 = log "viewFromRoute current page" model.currentPage
@@ -195,9 +205,11 @@ viewFromRoute model =
     Routes.NotFound ->
       viewNotFound model
       
+viewNotFound : Model -> Html Msg
 viewNotFound model =
   div [] [text "Not found."]
 
+viewAccounts : Model -> Html Msg
 viewAccounts model =
   div [] [
     b [] [text "Accounts"]
@@ -216,6 +228,7 @@ viewAccounts model =
           accountsTable accounts
   ]
 
+accountToRow : Account -> Html Msg
 accountToRow account =
   tr [] [
     td [] [input [type_ "checkbox"][]]
@@ -224,6 +237,7 @@ accountToRow account =
       , td [] [text (accountTypeToString account.accountType)]
   ]
 
+accountsTable : List Account -> Html Msg
 accountsTable accounts =
   table [
     style "width" "100%"
