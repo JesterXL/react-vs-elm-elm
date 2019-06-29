@@ -20,7 +20,7 @@ type alias Model =
     { key : Nav.Key
     , url : Url.Url
     , currentPage : Route
-    , accounts : Array Account
+    , accounts : List Account
     , accountState : AccountsState
     }
 
@@ -29,7 +29,7 @@ type AccountsState =
   | AccountsLoading
   | AccountsLoadNothing
   | AccountsLoadFailed
-  | AccountsLoadSuccess (Array Account)
+  | AccountsLoadSuccess (List Account)
 
 type AccountType = 
   DemandDeposit
@@ -42,7 +42,7 @@ accountTypeToString accountType =
     AccountAnalysis -> "Account Analysis"
 
 type alias Account =
-  { id : String
+  { id : Int
   , nickname : String
   , accountType: AccountType }
 
@@ -52,7 +52,7 @@ init flags url key =
     let
         msg = log "init url" url
     in
-    (Model key url Home (Array.fromList []) AccountsNotLoaded, Cmd.none)
+    (Model key url Home [] AccountsNotLoaded, Cmd.none)
 
 
 loadAccounts =
@@ -79,26 +79,22 @@ accountDecoder =
     (field "type" string)
 
 
--- accountTypeDecodeMaybe : Maybe String -> Maybe AccountType
--- accountTypeDecodeMaybe accountTypeStringMaybe =
---   case accountTypeStringMaybe of
---     Just theType ->
---       if String.toLower theType == "dda" then
---         Just DemandDeposit
---       else if String.toLower theType == "aa" then
---         Just AccountAnalysis
---       else
---         Nothing
---     Nothing ->
---       Nothing
+accountTypeDecode : String -> AccountType
+accountTypeDecode accountTypeString =
+  if String.toLower accountTypeString == "dda" then
+    DemandDeposit
+  else if String.toLower accountTypeString == "aa" then
+    AccountAnalysis
+  else
+    DemandDeposit
 
--- accountTypeDecoder : Decoder String
--- accountTypeDecoder =
---   field "type" string
---   |> Json.Decode.andThen
+accountJSONToAccount : AccountJSON -> Account
+accountJSONToAccount accountJSON = 
+  Account accountJSON.id accountJSON.nickname (accountTypeDecode accountJSON.typeString)
 
-
-
+accountJSONToAccounts : List AccountJSON -> List Account
+accountJSONToAccounts accountsList =
+  List.map accountJSONToAccount accountsList
 
 ---- UPDATE ----
 
@@ -146,7 +142,7 @@ update msg model =
               msg1 = log "accountJSONs is" accountJSONs
           in
           
-          ( { model | accountState = AccountsLoadSuccess (Array.fromList []) }
+          ( { model | accountState = AccountsLoadSuccess (accountJSONToAccounts accountJSONs), accounts = accountJSONToAccounts accountJSONs }
           , Cmd.none
           )
         Err datError ->
@@ -187,6 +183,9 @@ view model =
   }
 
 viewFromRoute model =
+  -- let
+  --     msg1 = log "viewFromRoute current page" model.currentPage
+  -- in
   case model.currentPage of
     Routes.Home ->
       viewAccounts model
@@ -208,16 +207,29 @@ viewAccounts model =
     , accountsTable model
   ]
 
+accountToRow account =
+  tr [] [
+    td [] [text (String.fromInt account.id)]
+      , td [] [text account.nickname]
+      , td [] [text (accountTypeToString account.accountType)]
+  ]
+
 accountsTable model =
   table [
     style "width" "100%"
-   ][
-    tr [] [
-      th [] [text "ID"]
-      , th [] [text "Account Nickname"]
-      , th [] [text "Account Type"]
-    ]
-  ]
+   ] 
+    (
+        [
+        tr [] [
+          th [] [text "ID"]
+          , th [] [text "Account Nickname"]
+          , th [] [text "Account Type"]
+        ]
+      ] ++ (List.map accountToRow model.accounts)
+    )
+
+   
+  
 
 accountsLoading =
   div [] [text "Loading accounts..."]
@@ -231,7 +243,7 @@ accountsNoneToShow =
 accountTableRow : Account -> Html Msg
 accountTableRow account =
   tr [] [
-    td [] [text account.id ] 
+    td [] [text (String.fromInt account.id) ] 
     , td [] [ text account.nickname ]
     , td [] [ text (accountTypeToString account.accountType) ]
   ]
