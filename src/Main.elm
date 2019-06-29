@@ -12,7 +12,7 @@ import Url.Parser exposing (string)
 import Array exposing (..)
 import Http
 import Json.Decode exposing (Decoder, map3, field, string, int, list)
-import Dict
+import Chunk exposing (chunk)
 
 ---- MODEL ----
 
@@ -105,13 +105,6 @@ type Msg =
     | FetchAccountsResult (Result Http.Error (List AccountJSON))
 
 
--- chunk : Int -> List -> List (List)
--- chunk pageSize list =
---   if pageSize < 1 then
---     [list]
---   else
---     if List.isEmpty list then
-
   
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -147,7 +140,7 @@ update msg model =
       case result of
         Ok accountJSONs ->
           let
-              msg1 = log "accountJSONs is" accountJSONs
+              msg1 = log "accountJSONs is" (chunk 10 accountJSONs)
           in
           
           ( { model | accountState = AccountsLoadSuccess (accountJSONToAccounts accountJSONs) }
