@@ -28,7 +28,35 @@ type AccountsState =
   | AccountsLoading
   | AccountsLoadNothing
   | AccountsLoadFailed
-  | AccountsLoadSuccess (List Account)
+  | AccountsLoadSuccess AccountView
+
+type SortDirection =
+  Ascending
+  | Descending
+  | NoSort
+
+type alias AccountView =
+  { accounts : List Account
+    , currentPage : Int
+    , filteredAndSortedAccounts : List Account
+    , pageSize : Int
+    , filterText : String
+    , sortDirection : SortDirection
+  }
+
+filterItems : String -> List Account -> List Account
+filterItems filterText accounts =
+  List.filter (\account -> String.contains filterText account.nickname) accounts
+
+-- sortItems : (a -> comparable) -> List Account -> List Account
+-- sortItems field accounts =
+--   List.sortWith (\a b =
+    -- )
+
+filterAndSortItems : String -> List Account -> List Account
+filterAndSortItems filterText accounts =
+  filterItems filterText accounts
+  -- |> sortItems field
 
 type AccountType = 
   DemandDeposit
@@ -141,9 +169,12 @@ update msg model =
         Ok accountJSONs ->
           let
               msg1 = log "accountJSONs is" (chunk 10 accountJSONs)
+              accounts = accountJSONToAccounts accountJSONs
+              filteredAndSortedAccounts = filterAndSortItems "" accounts
+              accountView = AccountView accounts 0 filteredAndSortedAccounts 10 "" NoSort
           in
           
-          ( { model | accountState = AccountsLoadSuccess (accountJSONToAccounts accountJSONs) }
+          ( { model | accountState = AccountsLoadSuccess accountView }
           , Cmd.none
           )
         Err datError ->
@@ -202,6 +233,14 @@ viewNotFound : Model -> Html Msg
 viewNotFound model =
   div [] [text "Not found."]
 
+getCurrentPage : Int -> Int -> List Account -> Array Account 
+getCurrentPage pageSize currentPage accounts =
+  chunk pageSize accounts
+  |> Array.fromList
+  |> Array.get currentPage
+  |> Maybe.withDefault []
+  |> Array.fromList
+
 viewAccounts : Model -> Html Msg
 viewAccounts model =
   div [] [
@@ -217,8 +256,8 @@ viewAccounts model =
           div [] [ text "No accounts." ]
         AccountsLoadFailed ->
           div [] [ text "Failed to load accounts." ]
-        AccountsLoadSuccess accounts ->
-          accountsTable accounts
+        AccountsLoadSuccess accountView ->
+          accountsTable (getCurrentPage accountView.pageSize accountView.currentPage accountView.filteredAndSortedAccounts)
   ]
 
 accountToRow : Account -> Html Msg
@@ -230,7 +269,7 @@ accountToRow account =
       , td [] [text (accountTypeToString account.accountType)]
   ]
 
-accountsTable : List Account -> Html Msg
+accountsTable : Array Account -> Html Msg
 accountsTable accounts =
   table [
     style "width" "100%"
@@ -243,7 +282,7 @@ accountsTable accounts =
           , th [] [text "Account Nickname"]
           , th [] [text "Account Type"]
         ]
-      ] ++ (List.map accountToRow accounts)
+      ] ++ (Array.map accountToRow accounts |> Array.toList)
     )
 
    
