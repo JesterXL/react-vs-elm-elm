@@ -58,6 +58,25 @@ filterAndSortItems filterText accounts =
   filterItems filterText accounts
   -- |> sortItems field
 
+nextPage : AccountView -> AccountView
+nextPage accountView =
+  if accountView.currentPage < accountView.pageSize then
+    { accountView | currentPage = accountView.currentPage + 1}
+  else
+    accountView
+
+previousPage : AccountView -> AccountView
+previousPage accountView =
+  if accountView.currentPage > 0 then
+    { accountView | currentPage = accountView.currentPage - 1}
+  else
+    accountView
+
+-- reFilterAndSortItems : AccountView -> AccountView
+-- reFilterAndSortItems accountView =
+
+
+
 type AccountType = 
   DemandDeposit
   | AccountAnalysis
@@ -131,9 +150,8 @@ type Msg =
     | UrlChanged Url.Url
     | FetchAccounts
     | FetchAccountsResult (Result Http.Error (List AccountJSON))
-
-
-  
+    | PreviousAccountsPage
+    | NextAccountsPage
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -185,6 +203,42 @@ update msg model =
           ( { model | accountState = AccountsLoadFailed }
             , Cmd.none
           )
+    PreviousAccountsPage ->
+      case model.accountState of
+        AccountsNotLoaded ->
+          ( model, Cmd.none )
+        AccountsLoading ->
+          ( model, Cmd.none )
+        AccountsLoadNothing ->
+          ( model, Cmd.none )
+        AccountsLoadFailed ->
+          ( model, Cmd.none )
+        AccountsLoadSuccess accountView ->
+          let
+            updatedView = previousPage accountView
+          in
+            (
+              { model | accountState = AccountsLoadSuccess updatedView }
+              , Cmd.none 
+            )
+    NextAccountsPage ->
+      case model.accountState of
+        AccountsNotLoaded ->
+          ( model, Cmd.none )
+        AccountsLoading ->
+          ( model, Cmd.none )
+        AccountsLoadNothing ->
+          ( model, Cmd.none )
+        AccountsLoadFailed ->
+          ( model, Cmd.none )
+        AccountsLoadSuccess accountView ->
+          let
+            updatedView =  nextPage accountView
+          in
+            (
+              { model | accountState = AccountsLoadSuccess updatedView }
+              , Cmd.none 
+            )
 
 
 -- SUBSCRIPTIONS
@@ -257,7 +311,7 @@ viewAccounts model =
         AccountsLoadFailed ->
           div [] [ text "Failed to load accounts." ]
         AccountsLoadSuccess accountView ->
-          accountsTable (getCurrentPage accountView.pageSize accountView.currentPage accountView.filteredAndSortedAccounts)
+          accountsTable accountView.currentPage (getCurrentPage accountView.pageSize accountView.currentPage accountView.filteredAndSortedAccounts)
   ]
 
 accountToRow : Account -> Html Msg
@@ -269,21 +323,26 @@ accountToRow account =
       , td [] [text (accountTypeToString account.accountType)]
   ]
 
-accountsTable : Array Account -> Html Msg
-accountsTable accounts =
-  table [
-    style "width" "100%"
-   ] 
-    (
-        [
-        tr [] [
-          th [] [input [ type_ "checkbox"] [] ]
-          , th [] [text "ID"]
-          , th [] [text "Account Nickname"]
-          , th [] [text "Account Type"]
-        ]
-      ] ++ (Array.map accountToRow accounts |> Array.toList)
-    )
+accountsTable : Int -> Array Account -> Html Msg
+accountsTable currentPage accounts =
+  div [] [
+    table [
+      style "width" "100%"
+    ] 
+      (
+          [
+          tr [] [
+            th [] [input [ type_ "checkbox"] [] ]
+            , th [] [text "ID"]
+            , th [] [text "Account Nickname"]
+            , th [] [text "Account Type"]
+          ]
+        ] ++ (Array.map accountToRow accounts |> Array.toList)
+      )
+    , button [onClick PreviousAccountsPage ] [text "<"]
+    , div [][ text ("Current Page: " ++ String.fromInt(currentPage))]
+    , button [onClick NextAccountsPage ] [text ">"]
+  ]
 
    
   
