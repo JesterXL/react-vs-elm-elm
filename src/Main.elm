@@ -60,7 +60,7 @@ filterAndSortItems filterText accounts =
 
 nextPage : AccountView -> AccountView
 nextPage accountView =
-  if accountView.currentPage < accountView.pageSize then
+  if accountView.currentPage < accountView.pageSize - 1 then
     { accountView | currentPage = accountView.currentPage + 1}
   else
     accountView
@@ -289,6 +289,11 @@ viewNotFound model =
 
 getCurrentPage : Int -> Int -> List Account -> Array Account 
 getCurrentPage pageSize currentPage accounts =
+  let
+      wat = chunk pageSize accounts
+      msg1 = log "what lol" wat
+  in
+  
   chunk pageSize accounts
   |> Array.fromList
   |> Array.get currentPage
