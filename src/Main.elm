@@ -16,6 +16,8 @@ import Chunk exposing (chunk)
 
 ---- MODEL ----
 
+
+
 type alias Model =
     { key : Nav.Key
     , url : Url.Url
@@ -71,6 +73,8 @@ previousPage accountView =
     { accountView | currentPage = accountView.currentPage - 1}
   else
     accountView
+
+
 
 -- reFilterAndSortItems : AccountView -> AccountView
 -- reFilterAndSortItems accountView =
@@ -152,6 +156,7 @@ type Msg =
     | FetchAccountsResult (Result Http.Error (List AccountJSON))
     | PreviousAccountsPage
     | NextAccountsPage
+    | ToggleSelectAccount Account
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -239,6 +244,22 @@ update msg model =
               { model | accountState = AccountsLoadSuccess updatedView }
               , Cmd.none 
             )
+
+    ToggleSelectAccount account ->
+      case model.accountState of
+        AccountsNotLoaded ->
+          ( model, Cmd.none )
+        AccountsLoading ->
+          ( model, Cmd.none )
+        AccountsLoadNothing ->
+          ( model, Cmd.none )
+        AccountsLoadFailed ->
+          ( model, Cmd.none )
+        AccountsLoadSuccess accountView ->
+          let
+            updatedView =  nextPage accountView
+          in
+            (model, Cmd.none)
 
 
 -- SUBSCRIPTIONS
