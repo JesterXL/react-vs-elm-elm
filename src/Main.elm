@@ -47,6 +47,7 @@ nextPage accountView =
     accountView
 
 
+
 previousPage : AccountView -> AccountView
 previousPage accountView =
   if accountView.currentPage > 0 then
@@ -187,7 +188,7 @@ update msg model =
           ( { model | accountState = AccountsLoadFailed (httpErrorToString datError) }
             , Cmd.none
           )
-          
+
     PreviousAccountsPage ->
       case model.accountState of
         AccountsNotLoaded ->
