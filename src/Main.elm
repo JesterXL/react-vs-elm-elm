@@ -3,8 +3,8 @@ module Main exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import Url exposing (Url)
-import Html exposing (Html, text, div, h1, img, ul, li, a, b, p, table, th, td, tr, button, select, input)
-import Html.Attributes exposing (src, href, style, type_)
+import Html exposing (Html, text, div, h1, img, ul, li, a, b, p, table, th, td, tr, button, select, input, br)
+import Html.Attributes exposing (src, href, style, type_, align)
 import Html.Events exposing (onClick)
 import Debug exposing (log)
 import Routes exposing (fromUrl, Route(..))
@@ -25,40 +25,19 @@ type alias Model =
     , accountState : AccountsState
     }
 
-type AccountsState =
-  AccountsNotLoaded
+type AccountsState
+  = AccountsNotLoaded
   | AccountsLoading
   | AccountsLoadNothing
-  | AccountsLoadFailed
+  | AccountsLoadFailed String
   | AccountsLoadSuccess AccountView
-
-type SortDirection =
-  Ascending
-  | Descending
-  | NoSort
 
 type alias AccountView =
   { accounts : List Account
     , currentPage : Int
-    , filteredAndSortedAccounts : List Account
     , pageSize : Int
-    , filterText : String
-    , sortDirection : SortDirection
+    , totalPages : Int
   }
-
-filterItems : String -> List Account -> List Account
-filterItems filterText accounts =
-  List.filter (\account -> String.contains filterText account.nickname) accounts
-
--- sortItems : (a -> comparable) -> List Account -> List Account
--- sortItems field accounts =
---   List.sortWith (\a b =
-    -- )
-
-filterAndSortItems : String -> List Account -> List Account
-filterAndSortItems filterText accounts =
-  filterItems filterText accounts
-  -- |> sortItems field
 
 nextPage : AccountView -> AccountView
 nextPage accountView =
@@ -67,6 +46,7 @@ nextPage accountView =
   else
     accountView
 
+
 previousPage : AccountView -> AccountView
 previousPage accountView =
   if accountView.currentPage > 0 then
@@ -74,29 +54,25 @@ previousPage accountView =
   else
     accountView
 
-
-
--- reFilterAndSortItems : AccountView -> AccountView
--- reFilterAndSortItems accountView =
-
-
-
-type AccountType = 
-  DemandDeposit
-  | AccountAnalysis
+type AccountType
+  = Checking
+  | Savings
+  | JamesBond
+  | MutualMoo
 
 accountTypeToString : AccountType -> String
 accountTypeToString accountType =
   case accountType of
-    DemandDeposit -> "Demand Deposit"
-    AccountAnalysis -> "Account Analysis"
+    Checking -> "Checking"
+    Savings -> "Savings"
+    JamesBond -> "Bond... James Bond"
+    MutualMoo -> "Mutual Cow"
 
 type alias Account =
-  { id : Int
+  { id : String
   , nickname : String
   , accountType: AccountType }
 
--- init : ( Model, Cmd Msg )
 init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
@@ -107,7 +83,7 @@ init flags url key =
 
 loadAccounts =
   Http.get
-    { url = "http://localhost:8001/accounts/dda"
+    { url = "http://localhost:8001/accounts"
     , expect = Http.expectJson FetchAccountsResult accountsDecoder
     }
 
@@ -115,28 +91,31 @@ accountsDecoder : Decoder (List AccountJSON)
 accountsDecoder =
   list accountDecoder
 
-
 type alias AccountJSON = 
- { id : Int
+ { id : String
  , nickname : String 
  , typeString : String }
 
 accountDecoder : Decoder AccountJSON
 accountDecoder =
   map3 AccountJSON
-    (field "id" int)
+    (field "id" string)
     (field "nickname" string)
     (field "type" string)
 
 
 accountTypeDecode : String -> AccountType
 accountTypeDecode accountTypeString =
-  if String.toLower accountTypeString == "dda" then
-    DemandDeposit
-  else if String.toLower accountTypeString == "aa" then
-    AccountAnalysis
+  if String.toLower accountTypeString == "checking" then
+    Checking
+  else if String.toLower accountTypeString == "savings" then
+    Savings
+  else if String.toLower accountTypeString == "bond... james bond" then
+    JamesBond
+  else if String.toLower accountTypeString == "mutual cow" then
+    MutualMoo
   else
-    DemandDeposit
+    Checking
 
 accountJSONToAccount : AccountJSON -> Account
 accountJSONToAccount accountJSON = 
@@ -156,7 +135,6 @@ type Msg =
     | FetchAccountsResult (Result Http.Error (List AccountJSON))
     | PreviousAccountsPage
     | NextAccountsPage
-    | ToggleSelectAccount Account
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -190,24 +168,26 @@ update msg model =
     FetchAccountsResult result ->
       case result of
         Ok accountJSONs ->
-          let
-              msg1 = log "accountJSONs is" (chunk 10 accountJSONs)
+          (let
+              desiredPageSize = 10
+              chunkedAccounts = chunk desiredPageSize accountJSONs
+              msg1 = log "accountJSONs is" chunkedAccounts
               accounts = accountJSONToAccounts accountJSONs
-              filteredAndSortedAccounts = filterAndSortItems "" accounts
-              accountView = AccountView accounts 0 filteredAndSortedAccounts 10 "" NoSort
+              accountView = AccountView accounts 0 desiredPageSize (List.length chunkedAccounts)
           in
           
           ( { model | accountState = AccountsLoadSuccess accountView }
           , Cmd.none
-          )
+          ))
         Err datError ->
           let
               msg2 = log "err is" datError
           in
           
-          ( { model | accountState = AccountsLoadFailed }
+          ( { model | accountState = AccountsLoadFailed (httpErrorToString datError) }
             , Cmd.none
           )
+          
     PreviousAccountsPage ->
       case model.accountState of
         AccountsNotLoaded ->
@@ -216,7 +196,7 @@ update msg model =
           ( model, Cmd.none )
         AccountsLoadNothing ->
           ( model, Cmd.none )
-        AccountsLoadFailed ->
+        AccountsLoadFailed _ ->
           ( model, Cmd.none )
         AccountsLoadSuccess accountView ->
           let
@@ -234,7 +214,7 @@ update msg model =
           ( model, Cmd.none )
         AccountsLoadNothing ->
           ( model, Cmd.none )
-        AccountsLoadFailed ->
+        AccountsLoadFailed _ ->
           ( model, Cmd.none )
         AccountsLoadSuccess accountView ->
           let
@@ -245,25 +225,21 @@ update msg model =
               , Cmd.none 
             )
 
-    ToggleSelectAccount account ->
-      case model.accountState of
-        AccountsNotLoaded ->
-          ( model, Cmd.none )
-        AccountsLoading ->
-          ( model, Cmd.none )
-        AccountsLoadNothing ->
-          ( model, Cmd.none )
-        AccountsLoadFailed ->
-          ( model, Cmd.none )
-        AccountsLoadSuccess accountView ->
-          let
-            updatedView =  nextPage accountView
-          in
-            (model, Cmd.none)
-
+httpErrorToString : Http.Error -> String
+httpErrorToString error =
+  case error of
+    Http.BadUrl reason ->
+      "BadUrl, reason: " ++ reason
+    Http.Timeout ->
+      "Timeout"
+    Http.NetworkError ->
+      "NetworkError"
+    Http.BadStatus status ->
+      "BadStatus, statusCode :" ++ (String.fromInt status)
+    Http.BadBody reason ->
+      "BadBody, reason: " ++ reason
 
 -- SUBSCRIPTIONS
-
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -271,36 +247,21 @@ subscriptions _ =
 
 ---- VIEW ----
 
-
 view : Model -> Browser.Document Msg
 view model =
   { title = "URL Interceptor"
   , body =
-      [ text "The current URL is: "
-      , b [] [ text (Url.toString model.url) ]
-      , ul []
-          [ viewLink "/"
-          , viewLink "/statements"
-          , viewLink "/downloads"
-          , viewLink "/statements/"
-          , viewLink "/downloads/"
-          ]
-      , viewFromRoute model
-      ]
+      [ viewFromRoute model ]
   }
 
 viewFromRoute : Model -> Html Msg
 viewFromRoute model =
-  -- let
-  --     msg1 = log "viewFromRoute current page" model.currentPage
-  -- in
+  let
+      msg1 = log "viewFromRoute current page" model.currentPage
+  in
   case model.currentPage of
     Routes.Home ->
       viewAccounts model
-    Routes.Statements ->
-      viewStatements model
-    Routes.Downloads ->
-      viewDownloads model
     Routes.NotFound ->
       viewNotFound model
       
@@ -321,12 +282,14 @@ getCurrentPage pageSize currentPage accounts =
   |> Maybe.withDefault []
   |> Array.fromList
 
+
 viewAccounts : Model -> Html Msg
 viewAccounts model =
-  div [] [
-    b [] [text "Accounts"]
-    , p [] [text "Bunch of accounts."]
-    , button [ onClick FetchAccounts ] [ text "Fetch Accounts"]
+  div [ style "margin" "8px"] [
+    h1 [style "text-align" "left"] [text "Accounts"]
+    , div [style "display" "flex"] [
+      button [ onClick FetchAccounts, style "padding" "8px", style "margin-bottom" "8px" ] [ text "Fetch Accounts"]
+    ]
     , case model.accountState of
         AccountsNotLoaded ->
           div [] [ text "Accounts not fetched yet."]
@@ -334,44 +297,57 @@ viewAccounts model =
           div [] [ text "Loading accounts..."]
         AccountsLoadNothing ->
           div [] [ text "No accounts." ]
-        AccountsLoadFailed ->
-          div [] [ text "Failed to load accounts." ]
+        AccountsLoadFailed errorString ->
+          div [] [ text ("Failed to load accounts:" ++ errorString) ]
         AccountsLoadSuccess accountView ->
-          accountsTable accountView.currentPage (getCurrentPage accountView.pageSize accountView.currentPage accountView.filteredAndSortedAccounts)
+          accountsTable accountView.totalPages accountView.currentPage (getCurrentPage accountView.pageSize accountView.currentPage accountView.accounts)
   ]
 
 accountToRow : Account -> Html Msg
 accountToRow account =
   tr [] [
-    td [] [input [type_ "checkbox"][]]
-    , td [] [text (String.fromInt account.id)]
-      , td [] [text account.nickname]
-      , td [] [text (accountTypeToString account.accountType)]
+    td [align "left"] [text account.id]
+      , td [align "left"] [text account.nickname]
+      , td [align "left"] [text (accountTypeToString account.accountType)]
   ]
 
-accountsTable : Int -> Array Account -> Html Msg
-accountsTable currentPage accounts =
+getDisabledTrue : Bool -> String
+getDisabledTrue bool =
+  case bool of
+    True -> "true"
+    False -> "false"
+
+accountsTable : Int -> Int -> Array Account -> Html Msg
+accountsTable totalPages currentPage accounts =
   div [] [
     table [
       style "width" "100%"
     ] 
       (
           [
-          tr [] [
-            th [] [input [ type_ "checkbox"] [] ]
-            , th [] [text "ID"]
-            , th [] [text "Account Nickname"]
-            , th [] [text "Account Type"]
+           tr [] [
+            th [align "left"] [text "ID"]
+            , th [align "left"] [text "Account Nickname"]
+            , th [align "left"] [text "Account Type"]
           ]
         ] ++ (Array.map accountToRow accounts |> Array.toList)
       )
-    , button [onClick PreviousAccountsPage ] [text "<"]
-    , div [][ text ("Current Page: " ++ String.fromInt(currentPage))]
-    , button [onClick NextAccountsPage ] [text ">"]
+      , br [][]
+    , div [style "display" "flex", style "height" "300px"][
+        div [style "display" "flex", style "width" "300px", style "height" "100px", style "margin" "auto"][
+            button [
+              onClick PreviousAccountsPage
+              , style "disabled" (getDisabledTrue (currentPage  == totalPages))
+              , style "flex-grow" "2"
+            ] [text "<"]
+          , div [style "padding" "8px", style "width" "60px"][ text (String.fromInt(currentPage + 1) ++ " of " ++ (String.fromInt totalPages) )]
+          , button [
+            onClick NextAccountsPage
+            , style "flex-grow" "2"
+          ] [text ">"]
+        ]
+    ]
   ]
-
-   
-  
 
 accountsLoading =
   div [] [text "Loading accounts..."]
@@ -382,26 +358,7 @@ accountsFailedToLoad =
 accountsNoneToShow =
   div [] [text "No accounts to show."]
 
-viewStatements model =
-  div [] [
-    b [] [text "Statements"]
-    , p [] [text "This is the statements page."]
-  ]
-
-viewDownloads model =
-  div [] [
-    b [] [text "Downloads"]
-    , p [] [text "Downloads shown here."]
-  ]
-
-
-viewLink : String -> Html msg
-viewLink path =
-  li [] [ a [ href path ] [ text path ] ]
-
-
 ---- PROGRAM ----
-
 
 main : Program () Model Msg
 main =
